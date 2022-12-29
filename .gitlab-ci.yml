@@ -1,0 +1,64 @@
+stages:
+  - test
+  - build
+  - deploy
+cache:
+  paths:
+    - node.tar.gz
+
+mr_dev_test:
+  stage: test
+  tags:
+    - bunker-dev-node
+  only:
+    - merge_requests
+  script:
+    - cp /mnt/node/dev.env .env
+    - npm install
+    - npm run lint
+    
+build-dev:
+  stage: build
+  tags:
+    - bunker-dev-node
+  script:
+    - cp /mnt/node/dev.env .env
+    - npm install
+    - npm run build
+    - tar cf node.tar.gz * .[!.]*
+  only:
+    - develop
+
+deploy-dev:
+  stage: deploy
+  tags:
+    - bunker-dev-node
+  script:
+    - tar xf node.tar.gz -C /mnt/node/apps
+    - chown -R root:root /mnt/node/apps
+    - cd /mnt/node && docker-compose restart
+  only:
+    - develop
+
+build-stg:
+  stage: build
+  tags:
+    - bunker-stg-node
+  script:
+    - cp /mnt/node/stg.env .env
+    - npm install
+    - npm run build
+    - tar cf node.tar.gz * .[!.]*
+  only:
+    - /^release\/.*$/
+    
+deploy-stg:
+  stage: deploy
+  tags:
+    - bunker-stg-node
+  script:
+    - tar xf node.tar.gz -C /mnt/node/apps
+    - chown -R root:root /mnt/node/apps
+    - cd /mnt/node && docker-compose restart
+  only:
+    - /^release\/.*$/
